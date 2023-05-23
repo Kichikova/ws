@@ -5,8 +5,13 @@ import protoLoader from '@grpc/proto-loader'
 
 const wsServer = new WebSocketServer({ port: 3001 })
 let wclients = []
-let messages = []
 let chatusers = []
+
+await fetch(`http://localhost:8000/chatusers/?format=json`)
+    .then(async (response) => {
+        let res = response.json()
+        chatusers = await res
+    });
 
 const packageDefinition = protoLoader.loadSync(path.join('/protos/alalallala.proto'));
 const Proto = grpc.loadPackageDefinition(packageDefinition);
@@ -23,7 +28,7 @@ wsServer.on("connection", (ws, req) => {
                 addclient(data, ws);
                 break;
             case "message":
-                addMessage(data, messages);
+                addMessage(data);
                 break;
             case "reaction":
                 addReaction(data);
@@ -62,19 +67,27 @@ function addclient(data, ws) {
     wclients.push(wc)
 }
 
-function addMessage(data, queue) {
+function addMessage(data) {
     let newmes = {
         event: "subscribe.addMessage",
         message: data.message,
         chatId: data.chatId
     };
     wclients.forEach((wc) => {
-        if (data.chatid in wc.chats) {
+        if (data.chatId in wc.chats) {
             if (wc.wss.readyState === ws.OPEN){
                 wc.wss.send(JSON.stringify(newmes));
             }
         }
     });
+    fetch("http://localhost:8000/message/",
+        {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(data.message)
+        })
 }
 
 function deleteMessage(data) {
@@ -89,8 +102,16 @@ function deleteMessage(data) {
             }
         }
     });
+
+    let url = "http://localhost:8000/message/"+data.id+"/"
+    fetch(url,
+        {
+            method: "DELETE",
+        })
+        .then((res)=>(console.log(res.body)))
 }
 
+//?
 function changeMessage(data) {
     let newmes = {
         event: "changemessage",
@@ -109,16 +130,33 @@ function changeMessage(data) {
 function addMember(data) {
     let newmes = {
         event: "chatadd",
-        chat_id: data.chat_id,
+        chat_id: data.chatId,
     };
+
+    let cu = {
+        chat_id: data.chatId,
+        user_id: data.userId
+    }
+
     for (let wc in wclients){
-        if (wc.id === data.user_id){
-            wc.chats.append(data.chat_id)
+        if (wc.id === data.userId){
+            wc.chats.append(data.chatId)
             wc.wss.send(JSON.stringify(newmes));
         }
     }
+
+    fetch("http://localhost:8000/chatuser/",
+        {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(cu)
+        })
 }
 
+
+//?
 function deleteMember(data) {
     let newmes = {
         event: "chatdelete",
@@ -135,15 +173,24 @@ function deleteMember(data) {
 function addReaction(data) {
     let newmes = {
         event: "addreaction",
-        message_id: data.message_id,
-        name: data.name,
-        user_id: data.user_id
+        reaction: data.reaction,
+        chatId: data.chatId
     };
+
     wclients.forEach((wc) => {
-        if (data.chatid in wc.chats) {
+        if (data.chatId in wc.chats) {
             if (wc.wss.readyState === ws.OPEN){
                 wc.wss.send(JSON.stringify(newmes));
             }
         }
     });
+
+    fetch("http://localhost:8000/reactions/",
+        {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(data.reaction)
+        })
 }
