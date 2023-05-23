@@ -64,13 +64,9 @@ function addclient(data, ws) {
 
 function addMessage(data, queue) {
     let newmes = {
-        event: "newmessage",
-        message_id: data.id,
-        content: data.content,
-        time: data.time,
-        user_id: data.user_id,
-        chat_id: data.chat_id,
-        shown: 0
+        event: "subscribe.addMessage",
+        message: data.message,
+        chatId: data.chatId
     };
     wclients.forEach((wc) => {
         if (data.chatid in wc.chats) {
