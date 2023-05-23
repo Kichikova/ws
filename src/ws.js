@@ -145,6 +145,7 @@ function addMember(data) {
         }
     }
 
+
     fetch("http://localhost:8000/chatuser/",
         {
             method: "POST",
@@ -185,7 +186,7 @@ function addReaction(data) {
         }
     });
 
-    fetch("http://localhost:8000/reactions/",
+    fetch("http://localhost:8000/reaction/",
         {
             method: "POST",
             headers: {
